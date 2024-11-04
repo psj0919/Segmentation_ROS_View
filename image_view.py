@@ -6,6 +6,7 @@ from sensor_msgs.msg import Image
 from ringbuffer import CircularBuffer
 from function import imgmsg_to_cv2
 from cv_bridge import CvBridge
+import matplotlib.pyplot as plt
 
 
 class image_view:
@@ -22,17 +23,19 @@ class image_view:
             self.buffer.enqueue(self.cv_image)
             cv2.imshow('Image View', self.buffer.dequeue())
             cv2.waitKey(33)
-        except:
-            print("Image View Error")
-	
-    def callback_result(self, data)
-    	try:
-            self.cv_image = self.bridge.imgmsg_to_cv2(data, 'bgr8')
-            self.buffer2.enqueue(self.cv_image)
-            cv2.imshow('Image View', self.buffer2.dequeue())
+        except CvBridgeError as e:
+            print(e)
+
+    def callback_result(self, data):
+        try:
+
+            self.cv_image2 = self.bridge.imgmsg_to_cv2(data, 'rgba8')
+            self.buffer2.enqueue(self.cv_image2)
+            cv2.imshow('Result Image View', self.buffer2.dequeue())
             cv2.waitKey(33)
         except:
-            print("Image View Error")
+            print("Result_Image View Error")	
+
 
 def main():
     img_node = image_view()
