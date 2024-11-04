@@ -10,8 +10,10 @@ from cv_bridge import CvBridge
 
 class image_view:
     def __init__(self):
-        self.fps_result_iamge_sub = rospy.Subscriber("/fps_controller/image_raw",Image, self.callback)
+        self.input_image = rospy.Subscriber("/fps_controller/image_raw", Image, self.callback)
+        self.fps_result_iamge_sub = rospy.Subscriber("/detected_class/result_image",Image, self.callback_result)
         self.buffer = CircularBuffer(50)
+        self.buffer2 = CircularBuffer(50)
         self.bridge = CvBridge()
 
     def callback(self, data):
@@ -22,7 +24,15 @@ class image_view:
             cv2.waitKey(33)
         except:
             print("Image View Error")
-
+	
+    def callback_result(self, data)
+    	try:
+            self.cv_image = self.bridge.imgmsg_to_cv2(data, 'bgr8')
+            self.buffer2.enqueue(self.cv_image)
+            cv2.imshow('Image View', self.buffer2.dequeue())
+            cv2.waitKey(33)
+        except:
+            print("Image View Error")
 
 def main():
     img_node = image_view()
@@ -36,4 +46,3 @@ def main():
 
 if __name__=='__main__':
     main()
-
