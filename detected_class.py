@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 import cv2
 import sys
-
+import time
 sys.path.append("/home/parksungjun/vehicle_segmentation-main")
 import torch
 from cv_bridge import CvBridge, CvBridgeError
@@ -14,10 +14,10 @@ from Core.demo import demo
 Resize_size = 256
 org_size_w = 480
 org_size_h = 640
-weight_file = "/home/parksungjun/Downloads/fcn_epochs_200_optimizer_adam_lr_0.0001_modelfcn8.pth"
+weight_file = "/home/parksungjun/Downloads/fcn_epochs_200_optimizer_adam_lr_0.0001_modelfcn32.pth"
 GPU_ID = '0'
 DEVICE = torch.device('cuda:0')
-network_name = 'FCN8s' 
+network_name = 'FCN32s' 
 num_class = 21
 
 Detected_class = demo(network_name, Resize_size, org_size_w, org_size_h,  DEVICE, weight_file, num_class)
@@ -32,7 +32,7 @@ class detected_class:
         try:
             cv_input_image = self.bridge.imgmsg_to_cv2(data, 'bgr8')
             result_image = Detected_class.run(cv_input_image)
-            result_image = self.bridge.cv2_to_imgmsg(result_image, encoding="rgba8")
+            result_image = self.bridge.cv2_to_imgmsg(result_image, encoding="bgr8")
             self.result_image.publish(result_image)
 
         except CvBridgeError as e:
