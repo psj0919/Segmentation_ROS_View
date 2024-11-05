@@ -63,6 +63,7 @@ class demo:
         # make_segmentation
         segmentation_iamge = self.pred_to_rgb(output[0])
         segmentation_iamge = self.resize_output(segmentation_iamge, self.org_size_w, self.org_size_h)
+        segmentation_iamge = cv2.addWeighted(data, 1, segmentation_iamge, 0.5, 0)
 
         return segmentation_iamge
 
@@ -92,17 +93,20 @@ class demo:
     def pred_to_rgb(self, pred):
         assert len(pred.shape) == 3
         #
-        pred = pred.softmax(dim=0).argmax(dim=0).to('cpu')
+        threshold = 0.5
+        pred = pred.softmax(dim=0)
+        pred, class_index = pred.max(dim=0)
+        pred = torch.where(pred > threshold, class_index, 0)
         #
         pred = pred.detach().cpu().numpy()
         #
-        color_segmentation_image = np.zeros((self.resize_size, self.resize_size, 4))
+        color_segmentation_image = np.zeros((self.resize_size, self.resize_size, 3))
         #
-        color_table = {0: (0, 0, 0, 0.3), 1: (128, 0, 0, 0.3), 2: (0, 128, 0, 0.3), 3: (0, 0, 128, 0.3), 4: (128, 128, 0, 0.3),
-                       5: (128, 0, 128, 0.3), 6: (0, 128, 128, 0.3), 7: (128, 128, 128, 0.3), 8: (0, 64, 64, 0.3),
-                       9: (64, 64, 64, 0.3), 10: (0, 0, 192, 0.3), 11: (192, 0, 192, 0.3), 12: (0, 192, 192, 0.3),
-                       13: (192, 192, 192, 0.3), 14: (64, 128, 0, 0.3), 15: (192, 0, 128, 0.3), 16: (64, 128, 128, 0.3),
-                       17: (192, 128, 128, 0.3), 18: (128, 64, 0, 0.3), 19: (128, 192, 0, 0.3), 20: (0, 64, 128, 0.3)}
+        color_table = {0: (0, 0, 0), 1: (128, 0, 0), 2: (0, 128, 0), 3: (0, 0, 128), 4: (128, 128, 0),
+                       5: (128, 0, 128), 6: (0, 128, 128), 7: (128, 128, 128), 8: (0, 64, 64),
+                       9: (64, 64, 64), 10: (0, 0, 192), 11: (192, 0, 192), 12: (0, 192, 192),
+                       13: (192, 192, 192), 14: (64, 128, 0), 15: (192, 0, 128), 16: (64, 128, 128),
+                       17: (192, 128, 128), 18: (128, 64, 0), 19: (128, 192, 0), 20: (0, 64, 128)}
         #
         for i in range(len(CLASSES)):
             color_segmentation_image[pred == i] = np.array(color_table[i])
@@ -227,7 +231,6 @@ class demo:
 #     plt.imshow(seg_img)
 #     plt.axis("off")
 #     plt.show()
-
 
 
 
