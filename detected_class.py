@@ -14,10 +14,10 @@ from Core.demo import demo
 Resize_size = 256
 org_size_w = 480
 org_size_h = 640
-weight_file = "/home/parksungjun/Downloads/fcn_epochs_200_optimizer_adam_lr_0.0001_modelfcn32.pth"
+weight_file = "/home/parksungjun/Downloads/fcn_epochs_200_optimizer_adam_lr_0.0001_modelfcn8.pth"
 GPU_ID = '0'
 DEVICE = torch.device('cuda:0')
-network_name = 'FCN32s' 
+network_name = 'FCN8s' 
 num_class = 21
 
 Detected_class = demo(network_name, Resize_size, org_size_w, org_size_h,  DEVICE, weight_file, num_class)
@@ -31,7 +31,11 @@ class detected_class:
     def callback(self, data):
         try:
             cv_input_image = self.bridge.imgmsg_to_cv2(data, 'bgr8')
+            start_time = time.time()
             result_image = Detected_class.run(cv_input_image)
+            end_time = time.time()
+            t = end_time - start_time
+            print(1 / t)
             result_image = self.bridge.cv2_to_imgmsg(result_image, encoding="bgr8")
             self.result_image.publish(result_image)
 
