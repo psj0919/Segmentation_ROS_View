@@ -14,10 +14,10 @@ from Core.demo import demo
 Resize_size = 256
 org_size_w = 480
 org_size_h = 640
-weight_file = "/home/parksungjun/Downloads/fcn_epochs_200_optimizer_adam_lr_0.0001_modelfcn8.pth"
+weight_file = "/home/parksungjun/Downloads/fcn_epochs_200_optimizer_adam_lr_0.0001_modelfcn32.pth"
 GPU_ID = '0'
 DEVICE = torch.device('cuda:0')
-network_name = 'FCN8s' 
+network_name = 'FCN32s' 
 num_class = 21
 
 Detected_class = demo(network_name, Resize_size, org_size_w, org_size_h,  DEVICE, weight_file, num_class)
@@ -31,11 +31,25 @@ class detected_class:
     def callback(self, data):
         try:
             cv_input_image = self.bridge.imgmsg_to_cv2(data, 'bgr8')
-            start_time = time.time()
+            cv_input_image = cv2.resize(cv_input_image, (256, 256))
+            s_time= time.time()
             result_image = Detected_class.run(cv_input_image)
-            end_time = time.time()
-            t = end_time - start_time
-            print(1 / t)
+            e_time= time.time()
+            #print(f'RUN TIME: {1 / (e_time - s_time)}')
+            
+
+            #result_image = result_image.to('cpu', non_blocking=True)
+            #result_image = result_image.numpy().astype(np.uint8)
+
+            
+            cv_input_image = cv2.resize(cv_input_image, (640, 480))
+            s_time= time.time()
+            result_image = cv2.resize(result_image.to('cpu').numpy().astype(np.uint8), (640, 480))
+            e_time= time.time()
+            #print(f'Cpu_TIME: {1 / (e_time - s_time)}')            
+            result_image = cv_input_image + result_image
+            
+            
             result_image = self.bridge.cv2_to_imgmsg(result_image, encoding="bgr8")
             self.result_image.publish(result_image)
 
