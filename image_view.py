@@ -2,8 +2,10 @@
 
 import cv2
 import rospy
+import time
 from sensor_msgs.msg import Image
 from ringbuffer import CircularBuffer
+from function import imgmsg_to_cv2
 from cv_bridge import CvBridge
 import matplotlib.pyplot as plt
 
@@ -12,7 +14,7 @@ class image_view:
     def __init__(self):
         #self.input_image = rospy.Subscriber("/fps_controller/image_raw", Image, self.callback)
         self.fps_result_iamge_sub = rospy.Subscriber("/detected_class/result_image",Image, self.callback)
-        self.buffer = CircularBuffer(100)
+        self.buffer = CircularBuffer(60)
         self.bridge = CvBridge()
         self.count = 0
 
@@ -20,9 +22,8 @@ class image_view:
         try: 
             self.cv_image = self.bridge.imgmsg_to_cv2(data, 'bgr8')
             self.buffer.enqueue(self.cv_image)
-            self.count += 1
-            print(self.count)
             cv2.imshow("Image View", self.buffer.dequeue())
+
             cv2.waitKey(33)
 
         except Exception as e: 
