@@ -4,12 +4,13 @@ import numpy as np
 import torch
 import os
 import matplotlib.pyplot as plt
+from copy import deepcopy
 from dataset.dataset import vehicledata
 from model.FCN8s import FCN8s
 from model.FCN16s import FCN16s
 from model.FCN32s import FCN32s
 import torch.nn.functional as F
-torch.set_num_threads(8)
+
 CLASSES = [
     'background', 'vehicle', 'bus', 'truck', 'policeCar', 'ambulance', 'schoolBus', 'otherCar',
     'freespace', 'curb', 'safetyZone', 'roadMark', 'whiteLane',
@@ -44,7 +45,7 @@ class demo:
         elif self.network_name == 'FCN32s':
             model = FCN32s(num_class=self.num_class)
 
-        return model.to(self.device)
+        return model.to(self.device).eval()
 
 
     def load_weight(self):
@@ -60,37 +61,30 @@ class demo:
         color_table_tensor = torch.tensor(list(table.values()), device = self.device, dtype=torch.float)
 
         return color_table_tensor
-
-
+        
+    @torch.no_grad()
     def run(self, data):
         # pre processing
+
         img = np.array(data, dtype=np.uint8)
         img = self.transform(img)
-        img = self.resize_train(img, self.resize_size)
-        img = img.unsqueeze(0)
-        
-        
-
-
+        img = img.unsqueeze(0).to(self.device)
         # model
-        self.model.eval()
-        s_time = time.time()   
-        output = self.model(img.to(self.device))
-        e_time = time.time()
-        #print(1 / (e_time - s_time))
+        print(img.shape)
+
+        
+        output = self.model(img)
+        print(output.shape)
+
+
+
+
 
         # make_segmentation
 
-                
-        segmentation_iamge = self.pred_to_rgb(output[0], self.color_table)
-
-        s_time = time.time()                
-        segmentation_iamge = self.resize_output(segmentation_iamge, self.org_size_w, self.org_size_h)
-        e_time = time.time()
-        print("pred_to_rgb:", (e_time - s_time))
-        #segmentation_iamge = cv2.addWeighted(data, 1, segmentation_iamge, 0.5, 0)
-        
-        segmentation_iamge = data + segmentation_iamge
+        segmentation_iamge = self.pred_to_rgb(output[0], self.color_table)  
+        #torch.cuda.synchronize()       
+        #segmentation_iamge = self.resize_output(segmentation_iamge, self.org_size_w, self.org_size_h)
 
       
         return segmentation_iamge
@@ -106,16 +100,9 @@ class demo:
     def resize_train(self, image, size):
         return F.interpolate(image.unsqueeze(0), size, mode='bilinear', align_corners=True).squeeze(0)
 
-    def resize_output(self, image, w_size, h_size):
-    	#output = torch.from_numpy(image).float().permute(2, 0, 1).unsqueeze(0)
-    	output = image.permute(2, 0, 1).unsqueeze(0)
-    	output = F.interpolate(output, size=(w_size, h_size), mode='bilinear', align_corners=True).squeeze(0)
-    	#output = self.matplotlib_outputshow(output)
-    	output = output.permute(1, 2, 0)
-    	s_time = time.time()
-    	output = output.detach().cpu().numpy().astype(np.uint8)
-    	e_time = time.time()
-    	#print("output to cpu: {}".format((e_time - s_time)))
+    def resize_output(self, image, img_mask):
+    	#output = img_mask.cpu().numpy().astype(np.uint8)
+    	output = image + output
     	return output
         
         
@@ -150,4 +137,3 @@ class demo:
         pred_rgb = table[pred]   
        
         return pred_rgb
-        
