@@ -29,7 +29,6 @@ class demo:
         self.device = device
         self.weight_path = weight_path
         self.num_class = num_class
-        self.color_table = self.get_color_table()
         self.model = self.load_network()
         self.load_weight()
 
@@ -53,55 +52,37 @@ class demo:
         resume_state_dict = ckpt['model'].state_dict()
 
         self.model.load_state_dict(resume_state_dict, strict=True)  # load weights
-        
-    def get_color_table(self):
-        color_table = {0: (0, 0, 0), 1: (128, 0, 0), 2: (0, 128, 0), 3: (0, 0, 128), 4: (128, 128, 0),
-                   5: (128, 0, 128), 6: (0, 128, 128), 7: (128, 128, 128), 8: (0, 64, 64),
-                   9: (64, 64, 64), 10: (0, 0, 192), 11: (192, 0, 192), 12: (0, 192, 192),
-                   13: (192, 192, 192), 14: (64, 128, 0), 15: (192, 0, 128), 16: (64, 128, 128),
-                   17: (192, 128, 128), 18: (128, 64, 0), 19: (128, 192, 0), 20: (0, 64, 128)}
 
-        
-        return color_table
          
     @torch.no_grad()
     def run(self, data):
         # pre processing
         self.model.eval()
-      
-        img = self.transform(data)
-        s_time = time.time()
+        img = self.transform(data[0])
+        s_time= time.time()
         img = img.to(self.device)
-        e_time = time.time()
-        #print(1 / (e_time - s_time))
+        e_time= time.time()
+        #print(1/ (e_time-s_time))
         # model
-        
         output = self.model(img)
-        
-        output = self.pred_to_rgb(output[0], self.color_table)    
-
+       
         return output
 
 
     def transform(self, img):
-        img1 = np.array(img, dtype=np.uint8)
-        img2 = img1.astype(np.float32)
-        img3 = img2.transpose(2, 0, 1)
-        img4 = torch.from_numpy(img3).float() / 255.0
-        img5 = img4.unsqueeze(0)
-
-        return img5
+        img = cv2.resize(img, (256, 256))    
+        img = torch.from_numpy(img.transpose(2, 0, 1)).float() / 255.0
+        return img.unsqueeze(0)
         
 
     def pred_to_rgb(self, pred, color_table):
-        pred = pred.softmax(dim=0).argmax(dim=0)
-       
-        pred = pred.to('cpu', non_blocking=True)
-       
-        pred_rgb = np.zeros_like(pred, dtype=np.uint8)
+        pred = torch.softmax(pred, dim=0)
+        pred = torch.argmax(pred, dim=0)
+        pred_ = pred.cpu().numpy()
+     
+        pred_rgb = np.zeros_like(pred_, dtype=np.uint8)
         pred_rgb = np.repeat(np.expand_dims(pred_rgb[:, :], axis=-1), 3, -1)
-         
         for i in range(len(CLASSES)):
-            pred_rgb[pred == i] = np.array(color_table[i])
-            
+            pred_rgb[pred_ == i] = np.array(color_table[i])  
+               
         return pred_rgb
