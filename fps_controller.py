@@ -19,7 +19,7 @@ class fps_controller:
     def callback(self, data):
         try:
             self.count += 1
-            if self.count % 75 == 0:
+            if self.count % 3 == 0:
                 self.result_image_pub.publish(data)
             elif self.count >= 100:
                 self.count = 0
