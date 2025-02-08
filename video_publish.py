@@ -11,25 +11,32 @@ class video_publish():
         self.image_pub = rospy.Publisher('video_publish/video_frames', Image, queue_size=1)
         self.bridge = CvBridge()
         self.cap = cv2.VideoCapture(video_path)
-    
+
         if not self.cap.isOpened():            
-            rospy.logger("Not Open Video")
+            rospy.loginfo("Not Open Video")
             return
-    def publish_frame():
+        self.last_time = rospy.Time.now()
+        self.timer = rospy.Timer(rospy.Duration(0.1), self.callback)
+              
+    def callback(self, event):
         try:        
             ret, frame = self.cap.read()
+
             if not ret:
-                rospy.loginfo("End of video")
+                self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                return
             ros_image = self.bridge.cv2_to_imgmsg(frame, encoding="bgr8")
-            self.image_pub.publish(ros_image)
+            self.image_pub.publish(ros_image)           
         except:
             print("Error video publish")            
             
 
 def main():
     video_path = '/home/parksungjun/output_video.mp4'
+    rospy.init_node('video_publish', anonymous=True)  
     video_node = video_publish(video_path)
-    rospy.init_node('video_publish', anonymous=True)    
+
+      
     try:
         rospy.spin()
     except KeyboardInterrupt:
