@@ -12,14 +12,19 @@ from sensor_msgs.msg import Image
 from std_msgs.msg import Int32
 
 # --------------------------------------------------setting model------------------------------------------------
-model = 'repvgg'  # [ fcn | repvgg | segmenter | deeplab ]
+model = 'fcn'  # [ fcn | repvgg | segmenter | deeplab ]
 Resize_size = 256
-org_size_w = 480
-org_size_h = 640
+org_size_w = 256
+org_size_h = 256
 DEVICE = torch.device('cuda:0')
 num_class = 21
         
-
+CLASSES = [
+    'background', 'vehicle', 'bus', 'truck', 'policeCar', 'ambulance', 'schoolBus', 'otherCar',
+    'freespace', 'curb', 'safetyZone', 'roadMark', 'whiteLane',
+    'yellowLane', 'blueLane', 'constructionGuide', 'trafficDrum',
+    'rubberCone', 'trafficSign', 'warningTriangle', 'fence']
+    
 color_table = {0: (0, 0, 0), 1: (128, 0, 0), 2: (0, 128, 0), 3: (0, 0, 128), 4: (128, 128, 0),
                5: (128, 0, 128), 6: (0, 128, 128), 7: (128, 128, 128), 8: (0, 64, 64),
                9: (64, 64, 64), 10: (0, 0, 192), 11: (192, 0, 192), 12: (0, 192, 192),
@@ -29,7 +34,7 @@ color_table = {0: (0, 0, 0), 1: (128, 0, 0), 2: (0, 128, 0), 3: (0, 0, 128), 4: 
         
 #------------------------------------------------------------------------------------------#
 if model =='fcn':
-    network_name = 'FCN32s' 
+    network_name = 'FCN8s' 
     if network_name == 'FCN8s' :
         weight_file = "/home/parksungjun/checkpoints/fcn_epochs_200_optimizer_adam_lr_0.0001_modelfcn8.pth"
 
@@ -44,16 +49,11 @@ if model =='fcn':
     Detected_class = demo(network_name, Resize_size, org_size_w, org_size_h,  DEVICE, weight_file, num_class)
 #------------------------------------------------------------------------------------------#    
 elif model =='repvgg':
-    network_name = 'my_m'
-     
+    network_name = 'my'
     if network_name == 'my':
         weight_file = "/home/parksungjun/checkpoints/RepVGG_sj_fcn_epochs_50_optimizer_adam_lr_0.0001_modelmy_max_prob_mAP.pth"
     elif network_name == 'pre_my':
-        weight_file = "/home/parksungjun/checkpoints/Pretrained_RepVGG_sj_fcn_epochs_50_optimizer_adam_lr_0.0001_modelmy_max_prob_mAP.pth"
-    elif network_name=="my_m":
-        weight_file = "/home/parksungjun/checkpoints/_RepVGG_sj_modify_fcn_epochs_50_optimizer_adam_lr_0.0001_modelmy_max_prob_mAP.pth"                
-    elif network_name=="pre_my_m":    
-        weight_file = "/home/parksungjun/checkpoints/Pretrained_RepVGG_sj_modify_fcn_epochs_50_optimizer_adam_lr_0.0001_modelmy_max_prob_mAP.pth"     
+        weight_file = "/home/parksungjun/checkpoints/Pretrained_RepVGG_sj_fcn_epochs_50_optimizer_adam_lr_0.0001_modelmy_max_prob_mAP.pth"     
     sys.path.append("/home/parksungjun/model/RepVGG_fcn-master")
     from Core.demo import demo
     Detected_class = demo(network_name, Resize_size, org_size_w, org_size_h,  DEVICE, weight_file, num_class)
@@ -86,22 +86,27 @@ elif model == 'deeplab':
 
 class detected_class:
     def __init__(self):
-        self.input_image = rospy.Subscriber("/fps_controller/image_raw", Image, self.callback)
+        #self.input_image = rospy.Subscriber("/fps_controller/image_raw", Image, self.callback)
+        self.input_image = rospy.Subscriber("video_publish/video_frames", Image, self.callback)
         self.result_image = rospy.Publisher("/detected_class/result_image", Image, queue_size=1)
         self.bridge = CvBridge()
         
     def callback(self, data):
       try:     
-        cv_input_image = self.bridge.imgmsg_to_cv2(data, 'bgr8')            
+        cv_input_image = self.bridge.imgmsg_to_cv2(data, 'rgb8')            
         s_time= time.time()     
         output = Detected_class.run(cv_input_image)
-        result_image = Detected_class.pred_to_rgb(output, color_table)
+        result_image, boundingbox = Detected_class.pred_to_rgb(output, color_table)
         e_time = time.time()
         print(f'total TIME: {1 / (e_time - s_time)}')        
-        result_image = cv2.resize(result_image, (640, 480))                           
+        cv_input_image = cv2.resize(cv_input_image, (256, 256))                           
         #        
-        result_image = cv_input_image+ result_image                      
-        msg_result_image = self.bridge.cv2_to_imgmsg(result_image, encoding="bgr8")
+        result_image = cv_input_image + result_image
+        for idx, (x, y, w, h) in boundingbox:
+            cv2.rectangle(result_image, (x, y), (x+w, y+h), color_table[idx], 2)
+            cv2.putText(result_image, f'{CLASSES[idx]}', (x, y-5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_table[idx], 1)
+        result_image = cv2.resize(result_image, (640, 480))                                               
+        msg_result_image = self.bridge.cv2_to_imgmsg(result_image, encoding="rgb8")
         #                        
         self.result_image.publish(msg_result_image)
       except CvBridgeError as e:
