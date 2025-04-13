@@ -95,6 +95,5 @@ class demo:
                 pass
             else:
                 pred_rgb[pred2 ==i] = np.array(color_table[i])  
-        e_time = time.time()
-        #print(1 / (e_time - s_time))              
+            
         return pred_rgb, bounding_box
